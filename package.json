@@ -1,5 +1,5 @@
 {
-  "name": "@well-known-components/base-component",
+  "name": "@dcl/node-scene-runtime",
   "version": "1.0.0",
   "description": "base component",
   "main": "dist/index.js",
