@@ -1,3 +1,6 @@
+// TODO: Import directly from `SceneSystem` package after is splitted from kernel
+// ref: https://github.com/decentraland/kernel/blob/main/packages/scene-system/sdk/sandbox.ts
+
 const whitelistES5: Array<keyof typeof global> = [
     'eval',
     'parseInt',
