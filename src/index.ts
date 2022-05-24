@@ -1,169 +1,86 @@
-import * as fs from "fs"
-import { customEval, getES5Context } from "./sandbox"
+import { ScriptingHost } from 'decentraland-rpc/lib/host'
+import { ScriptingTransport } from "decentraland-rpc/lib/common/json-rpc/types"
+import { future } from 'fp-future'
+import { CustomWebWorkerTransport } from './CustomWebWorkerTransport'
+import WrappedWorker from './WrappedWorker'
+import { SHARE_ENV } from 'worker_threads'
 
-type UpdateCallback = (deltaTime: number) => void
-const updateCallbacks: UpdateCallback[] = []
+//const gamekitWorkerRaw = require("raw-loader!./artifacts/cli.scene.system.js");
+//const gamekitWorkerBLOB = new Blob([gamekitWorkerRaw])
+//const gamekitWorkerUrl = URL.createObjectURL(gamekitWorkerBLOB)
 
-const counters = new Map<string, number>()
-
-const addCounter = (counterName: string) => {
-  const value = counters.get(counterName)
-  if (value) {
-    counters.set(counterName, value + 1)
-  } else {
-    counters.set(counterName, 1)
+/*function CustomWebWorkerTransport(fork: ChildProcess): ScriptingTransport {
+  const api: ScriptingTransport = {
+    onMessage(handler) {
+      fork.on("message", (message) => {
+        console.log("[K]I", message.data)
+        handler(message.data)
+      })
+    },
+    sendMessage(message) {
+      console.log("[K]O", message)
+      fork.send(message)
+    },
+    close() {
+        fork.kill()
+    },
   }
-}
 
-const printCounters = () => {
-  for (let [key, value] of counters) {
-    console.log(key, value);
-}
-}
+  return api
+}*/
 
-const dcl: DecentralandInterface = {
-  DEBUG: true,
-  log(...args: any[]) {
-    console.log(...args)
-  },
+class SceneWorker {
+  private readonly system = future<ScriptingHost>()
 
-  openExternalUrl(url: string) {
-    addCounter('openExternalUrl')
-  },
+  constructor() {
+    const transport = SceneWorker.buildWebWorkerTransport()
 
-  openNFTDialog(assetContractAddress: string, tokenId: string, comment: string | null) {
-    addCounter('openNFTDialog')
-  },
+    this.startSystem(transport)
+      .then(($) => this.system.resolve($))
+      .catch(($) => this.system.reject($))
+  }
 
-  addEntity(entityId: string) {
-    addCounter('addEntity')
-  },
-
-  removeEntity(entityId: string) {
-    addCounter('removeEntity')
-  },
-
-  /** update tick */
-  onUpdate(cb: UpdateCallback): void {
-    console.log('onUpdate')
-    updateCallbacks.push(cb)
-    addCounter('onUpdate')
-  },
-
-  /** event from the engine */
-  onEvent(cb: (event: any) => void): void {
-    addCounter('onEvent')
-  },
-
-  /** called after adding a component to the entity or after updating a component */
-  updateEntityComponent(entityId: string, componentName: string, classId: number, json: string): void {
-    addCounter('updateEntityComponent')
-  },
-
-  /** called after adding a DisposableComponent to the entity */
-  attachEntityComponent(entityId: string, componentName: string, id: string): void {
-    addCounter('attachEntityComponent')
-  },
-
-  /** call after removing a component from the entity */
-  removeEntityComponent(entityId: string, componentName: string): void {
-    addCounter('removeEntityComponent')
-  },
-
-  /** set a new parent for the entity */
-  setParent(entityId: string, parentId: string): void {
-    addCounter('setParent')
-  },
-
-  /** queries for a specific system with a certain query configuration */
-  query(queryType: any, payload: any) {
-    addCounter('query')
-  },
-
-  /** subscribe to specific events, events will be handled by the onEvent function */
-  subscribe(eventName: string): void {
-    addCounter('subscribe')
-  },
-
-  /** unsubscribe to specific event */
-  unsubscribe(eventName: string): void {
-    addCounter('unsubscribe')
-  },
-
-  componentCreated(id: string, componentName: string, classId: number) {
-    addCounter('componentCreated')
-  },
-
-  componentDisposed(id: string) {
-    addCounter('componentDisposed')
-  },
-
-  componentUpdated(id: string, json: string) {
-    addCounter('componentUpdated')
-  },
-
-  loadModule: async (_moduleName: string): Promise<ModuleDescriptor> => {
-    addCounter('loadModule')
-    return Promise.resolve({
-      rpcHandle: 'foo',
-      methods: [{name: 'bar'}]
+  private static buildWebWorkerTransport(): ScriptingTransport {
+    const worker = new WrappedWorker("./artifacts/cli.scene.system.js", {
+      env: SHARE_ENV
     })
-  },
-  callRpc: async (rpcHandle: string, methodName: string, args: any[]) => {
-    addCounter('callRpc')
-    return Promise.resolve()
-  },
-  onStart(cb: Function) {
-    addCounter('onStart')
-  },
-  error(message: any, data: any) {
-    addCounter('error')
+
+    return CustomWebWorkerTransport(worker)
+  }
+
+  private async startSystem(transport: ScriptingTransport) {
+    const system = await ScriptingHost.fromTransport(transport)
+
+    system.enable()
+
+    return system
+  }
+
+  public print() {
+    console.log('Hello world')
   }
 }
 
-const main = async () => {
-  const content = fs.readFileSync("./bin/game.js")
-  const source = content.toString()
+async function run() {
+  const sceneWorker = new SceneWorker()
+  sceneWorker.print()
 
-  performance.mark('custom-eval')
-  await customEval(source, getES5Context({dcl}))
-  performance.mark('end-custom-eval')
+  /*const scene = JSON.parse(readFileSync('scene.json').toString())
 
-  console.log('Counters after eval')
-  printCounters()
+  // resolve absolute path, it is necessary to resolve the sourceMaps
+  const sceneJsonFile = resolve(scene.main)
+  const sceneJsonContent = readFileSync(sceneJsonFile).toString()
 
-  const update = () => {
-    for(const update of updateCallbacks) {
-      update(1.0/30.0)
-    }
-  }
+  console.log(`> will load file: ${sceneJsonFile}`)
 
-  performance.mark('update')
-  for(let i = 0; i < 5000; ++i) {
-    update()
-  }
-  performance.mark('end-update')
+  const [runtime] = await runIvm(sceneJsonContent, sceneJsonFile, transport)
 
-  console.log('\nCounters after updates')
-  printCounters()
+  console.log('> awaiting scene to run')
 
-  const CustomEval = performance.measure(
-    'Custom Eval',
-    'custom-eval',
-    'end-custom-eval'
-  )
-
-  console.log(CustomEval)
-
-  const EngineUpdate = performance.measure(
-    'Engine Updates',
-    'update',
-    'end-update'
-  )
-
-  console.log(EngineUpdate)
+  await runtime*/
+  console.log("End")
 }
 
-main().catch((e: any) => {
-  console.log(`Error: ${e}`)
+run().catch((e) => {
+  console.log("Error:", e)
 })

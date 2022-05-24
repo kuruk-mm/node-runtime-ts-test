@@ -1,0 +1,9 @@
+[
+    {
+      "name": "Compile node scene runtime",
+      "kind": "Webpack",
+      "file": "./src/*.ts",
+      "target": "node"
+    }
+  ]
+  
