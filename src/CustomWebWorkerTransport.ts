@@ -1,5 +1,4 @@
-import { ScriptingTransport } from 'decentraland-rpc/lib/common/json-rpc/types'
-import Worker from 'web-worker'
+import { ScriptingTransport } from './old-rpc/common/json-rpc/types'
 
 export function CustomWebWorkerTransport(worker: Worker): ScriptingTransport {
   const api: ScriptingTransport = {
@@ -18,7 +17,7 @@ export function CustomWebWorkerTransport(worker: Worker): ScriptingTransport {
           err.error['isSceneError'] = true
           handler(err.error)
         } else if (err.message) {
-          ;(err as any)['isSceneError'] = true
+          ; (err as any)['isSceneError'] = true
           handler(err as any)
         }
       })
@@ -35,9 +34,9 @@ export function CustomWebWorkerTransport(worker: Worker): ScriptingTransport {
     },
     close() {
       if ('terminate' in worker) {
-        ;(worker as any).terminate()
+        ; (worker as any).terminate()
       } else if ('close' in worker) {
-        ;(worker as any).close()
+        ; (worker as any).close()
       }
     }
   }

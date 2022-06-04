@@ -1,11 +1,19 @@
-import './EngineAPI'
-import { ScriptingHost } from 'decentraland-rpc/lib/host/ScriptingHost'
-import { ScriptingTransport } from "decentraland-rpc/lib/common/json-rpc/types"
 import { future } from 'fp-future'
-import { CustomWebWorkerTransport } from './CustomWebWorkerTransport'
 import Worker from 'web-worker'
-import { EngineAPI } from './EngineAPI'
+
+import * as ScriptingHost from './old-rpc/host/ScriptingHost.js'
+import type { ScriptingTransport } from "./old-rpc/common/json-rpc/types"
+
+import { CustomWebWorkerTransport } from './CustomWebWorkerTransport.js'
+
+import './apis/EngineAPI.js'
+import './apis/DevTools.js'
+import './apis/EnvironmentAPI'
+import './apis/Permissions'
+
 import * as fs from 'fs'
+import { EngineAPI } from './apis/EngineAPI.js'
+
 //const gamekitWorkerRaw = require("raw-loader!./artifacts/cli.scene.system.js");
 //const gamekitWorkerBLOB = new Blob([gamekitWorkerRaw])
 //const gamekitWorkerUrl = URL.createObjectURL(gamekitWorkerBLOB)
@@ -32,7 +40,7 @@ import * as fs from 'fs'
 
 class SceneWorker {
   protected engineAPI: EngineAPI | null = null
-  private readonly system = future<ScriptingHost>()
+  private readonly system = future<ScriptingHost.ScriptingHost>()
 
   constructor() {
     const transport = SceneWorker.buildWebWorkerTransport()
@@ -43,20 +51,28 @@ class SceneWorker {
   }
 
   private static buildWebWorkerTransport(): ScriptingTransport {
-    const content = fs.readFileSync('./artifacts/scene.system.js')
-    const worker = new Worker(content)
+    debugger
 
+    // const content = fs.readFileSync('./artifacts/test.js')
+    // const worker = new Worker(`data:application/javascript,console.log(42)`);
+    // console.log('running', { content: content.toString() })
+
+
+    const worker = new Worker('./artifacts/scene.system.js')
     return CustomWebWorkerTransport(worker)
   }
 
   private async startSystem(transport: ScriptingTransport) {
-    const system = await ScriptingHost.fromTransport(transport)
+    console.log({ "startSystem": true })
+    const system = await ScriptingHost.ScriptingHost.fromTransport(transport)
 
     this.engineAPI = system.getAPIInstance('EngineAPI') as EngineAPI
 
     system.on('error', (e) => {
       // @ts-ignore
       console['log']('Unloading scene because of unhandled exception in the scene worker: ')
+
+      debugger
 
       // @ts-ignore
       console['error'](e)
@@ -72,6 +88,9 @@ class SceneWorker {
 
 async function run() {
   new SceneWorker()
+  // setTimeout(() => {
+  //   console.log('hi')
+  // }, 2000)
 }
 
 run().catch((e) => {

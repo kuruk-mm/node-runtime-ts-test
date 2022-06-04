@@ -1,4 +1,4 @@
-import { API, exposeMethod, getExposedMethods } from "decentraland-rpc/lib/host/API"
+import { API, exposeMethod, getExposedMethods } from "../old-rpc/host/API.js"
 
 export class ExposableAPI extends API {
   @exposeMethod

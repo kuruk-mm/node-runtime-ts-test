@@ -1,6 +1,7 @@
-import { registerAPI } from "decentraland-rpc/lib/host/ScriptingHost"
-import { APIOptions, exposeMethod } from "decentraland-rpc/lib/host/API"
-import { ExposableAPI } from "./ExposableAPI"
+
+import { APIOptions, exposeMethod } from "../old-rpc/host/API.js"
+import { registerAPI } from "../old-rpc/host/ScriptingHost.js"
+import { ExposableAPI } from "./ExposableAPI.js"
 
 export interface IEngineAPI {
   /**
