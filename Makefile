@@ -15,7 +15,8 @@ build:
 
 watch:
 	$(COMPILER) build.json --watch
-#build:
-#	./node_modules/.bin/tsc -p tsconfig.json
+
+build-ts:
+	./node_modules/.bin/tsc -p tsconfig.json
 
 .PHONY: build test

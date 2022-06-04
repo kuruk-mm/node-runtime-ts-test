@@ -1,10 +1,11 @@
-import { ScriptingHost } from 'decentraland-rpc/lib/host'
+import './EngineAPI'
+import { ScriptingHost } from 'decentraland-rpc/lib/host/ScriptingHost'
 import { ScriptingTransport } from "decentraland-rpc/lib/common/json-rpc/types"
 import { future } from 'fp-future'
 import { CustomWebWorkerTransport } from './CustomWebWorkerTransport'
-import WrappedWorker from './WrappedWorker'
-import { SHARE_ENV } from 'worker_threads'
-
+import Worker from 'web-worker'
+import { EngineAPI } from './EngineAPI'
+import * as fs from 'fs'
 //const gamekitWorkerRaw = require("raw-loader!./artifacts/cli.scene.system.js");
 //const gamekitWorkerBLOB = new Blob([gamekitWorkerRaw])
 //const gamekitWorkerUrl = URL.createObjectURL(gamekitWorkerBLOB)
@@ -30,6 +31,7 @@ import { SHARE_ENV } from 'worker_threads'
 }*/
 
 class SceneWorker {
+  protected engineAPI: EngineAPI | null = null
   private readonly system = future<ScriptingHost>()
 
   constructor() {
@@ -41,9 +43,8 @@ class SceneWorker {
   }
 
   private static buildWebWorkerTransport(): ScriptingTransport {
-    const worker = new WrappedWorker("./artifacts/cli.scene.system.js", {
-      env: SHARE_ENV
-    })
+    const content = fs.readFileSync('./artifacts/scene.system.js')
+    const worker = new Worker(content)
 
     return CustomWebWorkerTransport(worker)
   }
@@ -51,34 +52,26 @@ class SceneWorker {
   private async startSystem(transport: ScriptingTransport) {
     const system = await ScriptingHost.fromTransport(transport)
 
+    this.engineAPI = system.getAPIInstance('EngineAPI') as EngineAPI
+
+    system.on('error', (e) => {
+      // @ts-ignore
+      console['log']('Unloading scene because of unhandled exception in the scene worker: ')
+
+      // @ts-ignore
+      console['error'](e)
+
+      transport.close()
+    })
+
     system.enable()
 
     return system
   }
-
-  public print() {
-    console.log('Hello world')
-  }
 }
 
 async function run() {
-  const sceneWorker = new SceneWorker()
-  sceneWorker.print()
-
-  /*const scene = JSON.parse(readFileSync('scene.json').toString())
-
-  // resolve absolute path, it is necessary to resolve the sourceMaps
-  const sceneJsonFile = resolve(scene.main)
-  const sceneJsonContent = readFileSync(sceneJsonFile).toString()
-
-  console.log(`> will load file: ${sceneJsonFile}`)
-
-  const [runtime] = await runIvm(sceneJsonContent, sceneJsonFile, transport)
-
-  console.log('> awaiting scene to run')
-
-  await runtime*/
-  console.log("End")
+  new SceneWorker()
 }
 
 run().catch((e) => {
