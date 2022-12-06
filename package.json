@@ -29,7 +29,7 @@
   },
   "dependencies": {
     "@dcl/kernel": "^1.0.0-1079994180.commit-8e22ca9",
-    "@types/node": "^17.0.35",
+    "@types/node": "^18.11.11",
     "@types/ws": "^8.5.3",
     "decentraland-rpc": "^3.1.9",
     "fp-future": "^1.0.1",
